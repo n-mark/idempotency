@@ -45,7 +45,7 @@ sequenceDiagram
 | auth-service | `mblkuta/auth-service:latest` |
 | profile-service | `mblkuta/profile-service:0.3.0` |
 | billing-service | `mblkuta/billingsvc:0.3.1` |
-| **order-service** | **`mblkuta/ordersvc:hw9-v2`** (идемпотентный) |
+| **order-service** | **`mblkuta/ordersvc:hw9-v2`** (идемпотентный) `https://github.com/n-mark/order-svc` |
 | notification-service | `mblkuta/notificationsvc:0.3.0` |
 | warehouse-service | `mblkuta/warehousesvc:0.1.0` |
 | delivery-service | `mblkuta/deliverysvc:0.1.0` |
