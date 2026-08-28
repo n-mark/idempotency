@@ -1,0 +1,143 @@
+global:
+  namespace: arch-homework
+  host: arch.homework
+
+image:
+  auth:
+    repository: mblkuta/auth-service
+    tag: latest
+    pullPolicy: Always
+  profile:
+    repository: mblkuta/profile-service
+    tag: 0.3.0
+    pullPolicy: Always
+  billing:
+    repository: mblkuta/billingsvc
+    tag: 0.3.1
+    pullPolicy: Always
+  order:
+    repository: mblkuta/ordersvc
+    tag: hw9-v2
+    pullPolicy: Always
+  notification:
+    repository: mblkuta/notificationsvc
+    tag: 0.3.0
+    pullPolicy: Always
+  warehouse:
+    repository: mblkuta/warehousesvc
+    tag: 0.1.0
+    pullPolicy: Always
+  delivery:
+    repository: mblkuta/deliverysvc
+    tag: 0.1.0
+    pullPolicy: Always
+
+postgres:
+  image: postgres:16-alpine
+  user: postgres
+  password: password
+  defaultDB: usersdb
+  storage: 1Gi
+
+postgresBilling:
+  image: postgres:16-alpine
+  user: billing
+  password: billing
+  database: billing
+  storage: 1Gi
+
+postgresOrder:
+  image: postgres:16-alpine
+  user: order
+  password: order
+  database: order
+  storage: 1Gi
+
+postgresNotification:
+  image: postgres:16-alpine
+  user: notification
+  password: notification
+  database: notification
+  storage: 1Gi
+
+postgresProfile:
+  image: postgres:16-alpine
+  user: social_user
+  password: social_pass
+  database: social
+  storage: 1Gi
+
+postgresWarehouse:
+  image: postgres:16-alpine
+  user: warehouse
+  password: warehouse
+  database: warehouse
+  storage: 1Gi
+
+postgresDelivery:
+  image: postgres:16-alpine
+  user: delivery
+  password: delivery
+  database: delivery
+  storage: 1Gi
+
+rabbitmq:
+  image: rabbitmq:3.13-management-alpine
+  user: billing
+  password: billing
+  storage: 8Gi
+  managementPort: 15672
+  amqpPort: 5672
+
+auth:
+  replicas: 1
+  port: 8000
+  jwtSecret: "changeme_super_secret_jwt_key_please_rotate"
+  resources:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits:   { cpu: "200m", memory: "128Mi" }
+
+profile:
+  replicas: 1
+  port: 8080
+  resources:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits:   { cpu: "200m", memory: "128Mi" }
+
+billing:
+  replicas: 1
+  port: 8080
+  resources:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits:   { cpu: "200m", memory: "128Mi" }
+
+order:
+  replicas: 1
+  port: 8080
+  resources:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits:   { cpu: "200m", memory: "128Mi" }
+
+notification:
+  replicas: 1
+  port: 8080
+  resources:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits:   { cpu: "200m", memory: "128Mi" }
+
+warehouse:
+  replicas: 1
+  port: 8080
+  resources:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits:   { cpu: "200m", memory: "128Mi" }
+
+delivery:
+  replicas: 1
+  port: 8080
+  resources:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits:   { cpu: "200m", memory: "128Mi" }
+
+traefik:
+  entryPoint: web

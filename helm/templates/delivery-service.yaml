@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delivery-service
+  namespace: {{ include "arch.namespace" . }}
+spec:
+  replicas: {{ .Values.delivery.replicas }}
+  selector:
+    matchLabels:
+      app: delivery-service
+  template:
+    metadata:
+      labels:
+        app: delivery-service
+    spec:
+      containers:
+        - name: delivery
+          image: "{{ .Values.image.delivery.repository }}:{{ .Values.image.delivery.tag }}"
+          imagePullPolicy: {{ .Values.image.delivery.pullPolicy }}
+          env:
+            - name: PG_HOST
+              value: postgres-delivery
+            - name: PG_PORT
+              value: "5432"
+            - name: PG_USER
+              value: {{ .Values.postgresDelivery.user }}
+            - name: PG_PASSWORD
+              value: {{ .Values.postgresDelivery.password }}
+            - name: PG_DATABASE
+              value: {{ .Values.postgresDelivery.database }}
+            - name: PG_SSLMODE
+              value: disable
+          ports:
+            - containerPort: {{ .Values.delivery.port }}
+          resources:
+            {{- toYaml .Values.delivery.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: delivery-service
+  namespace: {{ include "arch.namespace" . }}
+spec:
+  selector:
+    app: delivery-service
+  ports:
+    - port: 80
+      targetPort: {{ .Values.delivery.port }}

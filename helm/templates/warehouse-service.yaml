@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: warehouse-service
+  namespace: {{ include "arch.namespace" . }}
+spec:
+  replicas: {{ .Values.warehouse.replicas }}
+  selector:
+    matchLabels:
+      app: warehouse-service
+  template:
+    metadata:
+      labels:
+        app: warehouse-service
+    spec:
+      containers:
+        - name: warehouse
+          image: "{{ .Values.image.warehouse.repository }}:{{ .Values.image.warehouse.tag }}"
+          imagePullPolicy: {{ .Values.image.warehouse.pullPolicy }}
+          env:
+            - name: PG_HOST
+              value: postgres-warehouse
+            - name: PG_PORT
+              value: "5432"
+            - name: PG_USER
+              value: {{ .Values.postgresWarehouse.user }}
+            - name: PG_PASSWORD
+              value: {{ .Values.postgresWarehouse.password }}
+            - name: PG_DATABASE
+              value: {{ .Values.postgresWarehouse.database }}
+            - name: PG_SSLMODE
+              value: disable
+          ports:
+            - containerPort: {{ .Values.warehouse.port }}
+          resources:
+            {{- toYaml .Values.warehouse.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: warehouse-service
+  namespace: {{ include "arch.namespace" . }}
+spec:
+  selector:
+    app: warehouse-service
+  ports:
+    - port: 80
+      targetPort: {{ .Values.warehouse.port }}

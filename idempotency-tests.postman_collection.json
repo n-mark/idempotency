@@ -1,0 +1,431 @@
+{
+  "info": {
+    "name": "OrderSvc - Idempotency Tests",
+    "description": "Tests idempotency and commutativity for Order Service. Uses arch.homework as {{baseUrl}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://arch.homework",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "42",
+      "type": "string"
+    },
+    {
+      "key": "idempotencyKey1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "idempotencyKey2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "createdOrderId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "{{baseUrl}}/order",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.variables.set('idempotencyKey1', pm.variables.replaceIn('{{$randomUUID}}'));",
+              "pm.variables.set('idempotencyKey2', pm.variables.replaceIn('{{$randomUUID}}'));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 202 Accepted', () => { pm.response.to.have.status(202); });",
+              "pm.test('Response has order ID and pending status', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json).to.have.property('status', 'pending');",
+              "    pm.expect(json).to.have.property('user_id', 42);",
+              "    pm.variables.set('createdOrderId', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey1}}",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "{{userId}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 1500.50}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/order",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "order"
+          ]
+        }
+      }
+    },
+    {
+      "name": "{{baseUrl}}/order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK on replay', () => { pm.response.to.have.status(200); });",
+              "pm.test('Same order ID on replay', () => {",
+              "    const json = pm.response.json();",
+              "    const originalId = pm.variables.get('createdOrderId');",
+              "    pm.expect(json.id).to.eql(originalId);",
+              "    pm.expect(json.user_id).to.eql(42);",
+              "    pm.expect(json.to_withdraw).to.eql(1500.5);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey1}}",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "{{userId}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 1500.50}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/order",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "order"
+          ]
+        }
+      }
+    },
+    {
+      "name": "{{baseUrl}}/order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 when Idempotency-Key missing', () => { pm.response.to.have.status(400); });",
+              "pm.test('Error mentions Idempotency-Key', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.error).to.include('Idempotency-Key');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "{{userId}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 999.99}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/order",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "order"
+          ]
+        }
+      }
+    },
+    {
+      "name": "{{baseUrl}}/order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 for invalid UUID', () => { pm.response.to.have.status(400); });",
+              "pm.test('Error mentions UUID', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.error).to.include('UUID');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "not-a-valid-uuid",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "42",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 100.00}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/order",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "order"
+          ]
+        }
+      }
+    },
+    {
+      "name": "{{baseUrl}}/order/{{createdOrderId}}",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+              "pm.test('Order matches created one', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.id).to.eql(pm.variables.get('createdOrderId'));",
+              "    pm.expect(json.user_id).to.eql(42);",
+              "    pm.expect(json.to_withdraw).to.eql(1500.5);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "{{userId}}",
+            "type": "text"
+          }
+        ],
+        "body": {},
+        "url": {
+          "raw": "{{baseUrl}}/order/{{createdOrderId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "order",
+            "{{createdOrderId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "{{baseUrl}}/order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 on replay with different body', () => { pm.response.to.have.status(200); });",
+              "pm.test('Returns original order, ignores new body', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.id).to.eql(pm.variables.get('createdOrderId'));",
+              "    pm.expect(json.to_withdraw).to.eql(1500.5);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey1}}",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "{{userId}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 9999.99, \"product_id\": 999, \"quantity\": 999, \"slot_id\": 999}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/order",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "order"
+          ]
+        }
+      }
+    },
+    {
+      "name": "{{baseUrl}}/order",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "if (!pm.variables.get('ik1b')) pm.variables.set('ik1b', pm.variables.replaceIn('{{$randomUUID}}'));",
+              "if (!pm.variables.get('ik2b')) pm.variables.set('ik2b', pm.variables.replaceIn('{{$randomUUID}}'));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 202', () => { pm.response.to.have.status(202); });",
+              "pm.test('Order is created', () => { const json = pm.response.json(); pm.expect(json).to.have.property('id'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "{{ik1b}}",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "42",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"price\": 750.25}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/order",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "order"
+          ]
+        }
+      }
+    },
+    {
+      "name": "{{baseUrl}}/health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', () => { pm.response.to.have.status(200); });",
+              "pm.test('Status is ok', () => { pm.expect(pm.response.json()).to.have.property('status', 'ok'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "body": {},
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    }
+  ]
+}
