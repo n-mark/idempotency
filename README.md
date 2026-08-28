@@ -1,4 +1,4 @@
-# Идемпотентность API — Order Service. Homework 9
+# Идемпотентность API
 
 **Паттерн:** Client-Supplied Idempotency Key (ключ идемпотентности, предоставляемый клиентом)
 
