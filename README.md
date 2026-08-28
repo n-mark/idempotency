@@ -1,12 +1,44 @@
-# Idempotency — Order Service. Homework 9
+# Идемпотентность API — Order Service. Homework 9
 
-**Паттерн:** Client-Supplied Idempotency Key (ключ идемпотентности)
+**Паттерн:** Client-Supplied Idempotency Key (ключ идемпотентности, предоставляемый клиентом)
 
-Клиент передаёт UUID в заголовке `Idempotency-Key`. Первый запрос -> **202**, повторный -> **200** с тем же заказом.
+Клиент передаёт UUID в заголовке `Idempotency-Key`. Первый запрос → **202**, повторный → **200** с тем же заказом.
+
+## Диаграмма последовательности
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant OrderSvc as Order-Svc
+    participant Postgres
+
+    Client->>OrderSvc: POST /order<br/>Idempotency-Key: UUID-A
+
+    OrderSvc->>Postgres: BEGIN TX
+    OrderSvc->>Postgres: INSERT INTO orders (...)
+    OrderSvc->>Postgres: INSERT INTO idempotency_keys<br/>(key=UUID-A, ...)
+    OrderSvc->>Postgres: ON CONFLICT DO NOTHING
+    Postgres-->>OrderSvc: COMMIT (rows_affected=1)
+
+    OrderSvc-->>Client: 202 Accepted (order)
+
+    Note over Client,OrderSvc: Повторный запрос
+
+    Client->>OrderSvc: POST /order<br/>Idempotency-Key: UUID-A
+
+    OrderSvc->>Postgres: BEGIN TX
+    OrderSvc->>Postgres: INSERT INTO orders (...)
+    OrderSvc->>Postgres: INSERT INTO idempotency_keys<br/>(key=UUID-A, ...)
+    OrderSvc->>Postgres: ON CONFLICT DO NOTHING
+    Postgres-->>OrderSvc: ROLLBACK (rows_affected=0)
+
+    OrderSvc->>Postgres: SELECT ... FROM orders<br/>WHERE id = (stored)
+
+    Postgres-->>OrderSvc: Existing order
+    OrderSvc-->>Client: 200 OK (existing order)
+```
 
 ## Состав
-
-Полная distributed transaction (Saga с оркестрацией) + идемпотентный order-service:
 
 | Сервис | Образ |
 |--------|-------|
@@ -29,23 +61,6 @@ helm install arch-homework ./helm --namespace arch-homework --create-namespace -
 kubectl get pods -n arch-homework
 ```
 
-## Проверка идемпотентности
-
-```bash
-kubectl port-forward -n arch-homework svc/order-service 8089:80 &
-
-IDKEY=$(uuidgen)
-# первый запрос — 202
-curl -s -w '\nHTTP: %{http_code}\n' -X POST http://localhost:8089/api/v1/order \
-  -H "Idempotency-Key: $IDKEY" -H 'x-user-id: 42' \
-  -H 'Content-Type: application/json' -d '{"price":1500.50}'
-
-# повторный — 200 (тот же order.id)
-curl -s -w '\nHTTP: %{http_code}\n' -X POST http://localhost:8089/api/v1/order \
-  -H "Idempotency-Key: $IDKEY" -H 'x-user-id: 42' \
-  -H 'Content-Type: application/json' -d '{"price":1500.50}'
-```
-
 ## Postman
 
 Коллекция: `./idempotency-tests.postman_collection.json`
@@ -57,14 +72,6 @@ curl -s -w '\nHTTP: %{http_code}\n' -X POST http://localhost:8089/api/v1/order \
 # Установка Newman
 npm install -g newman
 
-# Прогон (предварительно сделайте port-forward)
-kubectl port-forward -n arch-homework svc/order-service 8089:80 &
-
-newman run ./idempotency-tests.postman_collection.json \
-  --env-var "baseUrl=http://localhost:8089" \
-  --reporters cli
-
-# Или через Ingress (если arch.homework настроен на кластер)
 newman run ./idempotency-tests.postman_collection.json \
   --env-var "baseUrl=http://arch.homework" \
   --reporters cli
